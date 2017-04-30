@@ -345,9 +345,9 @@
 #define __NR_helloworld         337
 #define __NR_printself          338
 #define __NR_printother         339
-#define __NR_vma_stats          340
-#define __NR_vma_props          341
-#define __NR_zone_stats         342
+#define __NR_statistics_vma     340
+#define __NR_by_process_vma     341
+#define __NR_stats_for_zone     342
 
 #ifdef __KERNEL__
 

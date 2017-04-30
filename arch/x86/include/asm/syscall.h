@@ -214,11 +214,11 @@ asmlinkage int sys_printself(void);
 
 asmlinkage int sys_printother(int arb_pid);
 
-asmlinkage int sys_vma_stats(int pid);
+asmlinkage int sys_statistics_vma(int pid);
 
-asmlinkage int sys_vma_props(unsigned long mem, int pid);
+asmlinkage int sys_by_process_vma(unsigned long mem, int pid);
 
-asmlinkage int sys_zone_stats(void);
+asmlinkage int sys_stats_for_zone(void);
 
 #endif	/* CONFIG_X86_32 */
 

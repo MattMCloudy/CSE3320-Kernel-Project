@@ -339,6 +339,6 @@ ENTRY(sys_call_table)
 	.long sys_helloworld            /* 337 */
 	.long sys_printself             /* 338 */
 	.long sys_printother            /* 339 */
-	.long sys_vma_stats             /* 340 */
-	.long sys_vma_props             /* 341 */
-	.long sys_zone_stats            /* 342 */
+	.long sys_statistics_vma             /* 340 */
+	.long sys_by_process_vma             /* 341 */
+	.long sys_stats_for_zone            /* 342 */
