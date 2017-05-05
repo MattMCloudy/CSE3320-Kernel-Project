@@ -482,6 +482,27 @@ struct rt_rq {
 #endif
 };
 
+/* added by Jia Rao: define wrr runqueue here */
+struct wrr_rq {
+	struct sched_wrr_entity* wrr_se;
+	
+	unsigned long wrr_nr_migratory;
+	unsigned long wrr_nr_total;
+	int overloaded;
+	struct plist_head pushable_tasks;
+
+	int wrr_throttled;
+	u64 wrr_time;
+	u64 wrr_runtime;
+	spinlock_t wrr_runtime_lock;
+	
+	unsigned long wrr_nr_boosted;
+	struct task_group* tg;
+	struct list_head tasks;
+	struct rq* rq;
+	int wrr_nr_running;
+	int wrr_nr_users;
+};
 #ifdef CONFIG_SMP
 
 /*
@@ -546,6 +567,7 @@ struct rq {
 
 	struct cfs_rq cfs;
 	struct rt_rq rt;
+	struct wrr_rq wrr;
 
 #ifdef CONFIG_FAIR_GROUP_SCHED
 	/* list of leaf cfs_rq on this cpu: */
@@ -1814,6 +1836,7 @@ static void calc_load_account_active(struct rq *this_rq);
 #include "sched_stats.h"
 #include "sched_idletask.c"
 #include "sched_fair.c"
+#include "sched_wrr.c" // added by Jia Rao: include the wrr policy order matters !!!
 #include "sched_rt.c"
 #ifdef CONFIG_SCHED_DEBUG
 # include "sched_debug.c"
@@ -2523,6 +2546,7 @@ static void __sched_fork(struct task_struct *p)
 #endif
 
 	INIT_LIST_HEAD(&p->rt.run_list);
+	INIT_LIST_HEAD(&p->wrr.run_list); //added by Jia Rao: initialize the process's runqueue pointer
 	p->se.on_rq = 0;
 	INIT_LIST_HEAD(&p->se.group_node);
 
@@ -5231,6 +5255,9 @@ void scheduler_tick(void)
 	struct task_struct *curr = rq->curr;
 
 	sched_clock_tick();
+     //   if (curr->policy == SCHED_WRR)
+//		printk(KERN_EMERG "Proc: %d called tick\n", curr->pid);
+		
 
 	spin_lock(&rq->lock);
 	update_rq_clock(rq);
@@ -5451,6 +5478,9 @@ need_resched_nonpreemptible:
 
 	put_prev_task(rq, prev);
 	next = pick_next_task(rq);
+//        if (prev->policy == SCHED_WRR)
+	//printk(KERN_EMERG "Proc: %d has been put Proc: %d is picked\n", prev->pid, next->pid);
+
 
 	if (likely(prev != next)) {
 		sched_info_switch(prev, next);
@@ -6185,6 +6215,9 @@ __setscheduler(struct rq *rq, struct task_struct *p, int policy, int prio)
 	case SCHED_RR:
 		p->sched_class = &rt_sched_class;
 		break;
+	case SCHED_WRR:
+		p->sched_class = &wrr_sched_class;
+		break;
 	}
 
 	p->rt_priority = prio;
@@ -6416,6 +6449,20 @@ SYSCALL_DEFINE3(sched_setscheduler, pid_t, pid, int, policy,
 	return do_sched_setscheduler(pid, policy, param);
 }
 
+//added by Jia Rao: implement the new system call. Borrow ideas from syscall sched_setscheduler
+SYSCALL_DEFINE3(set_wrr_scheduler, pid_t, pid, int, policy,
+		int, weight)
+{
+	int status = do_sched_setscheduler(pid, policy, weight);
+	
+	if (status < 0) {
+		printk(KERN_EMERG "ERR: error in set scheduler");
+		printk(KERN_EMERG "error %d\n", status);
+		return status;
+	}
+	
+	return 0;
+}
 /**
  * sys_sched_setparam - set/change the RT priority of a thread
  * @pid: the pid in question.
@@ -6444,6 +6491,7 @@ SYSCALL_DEFINE1(sched_getscheduler, pid_t, pid)
 	if (p) {
 		retval = security_task_getscheduler(p);
 		if (!retval)
+			printk(KERN_EMERG "Proc: %d has policy %d and weight: %d\n", pid, retval, p->wrr.weight);
 			retval = p->policy
 				| (p->sched_reset_on_fork ? SCHED_RESET_ON_FORK : 0);
 	}
@@ -9287,7 +9335,24 @@ static void init_rt_rq(struct rt_rq *rt_rq, struct rq *rq)
 	rt_rq->rq = rq;
 #endif
 }
+//added by Jia Rao: initialize the wrr runqueue
+static void init_wrr_rq(struct wrr_rq *wrr_rq, struct rq *rq)
+{
+	INIT_LIST_HEAD(&wrr_rq->tasks);
+	
+	wrr_rq->wrr_nr_migratory = 0;
+	wrr_rq->overloaded = 0;
+	plist_head_init(&wrr_rq->pushable_tasks, &rq->lock);
 
+	wrr_rq->wrr_time = 0;
+	wrr_rq->wrr_throttled = 0;
+	wrr_rq->wrr_runtime = 0;
+	spin_lock_init(&wrr_rq->wrr_runtime_lock);
+	wrr_rq->rq = rq;
+	wrr_rq->wrr_nr_boosted = 0;
+	wrr_rq->wrr_nr_users = 0;
+	wrr_rq->wrr_nr_running = 0;
+}
 #ifdef CONFIG_FAIR_GROUP_SCHED
 static void init_tg_cfs_entry(struct task_group *tg, struct cfs_rq *cfs_rq,
 				struct sched_entity *se, int cpu, int add,
@@ -9450,6 +9515,7 @@ void __init sched_init(void)
 		rq->calc_load_update = jiffies + LOAD_FREQ;
 		init_cfs_rq(&rq->cfs, rq);
 		init_rt_rq(&rq->rt, rq);
+		init_wrr_rq(&rq->wrr, rq); //added by Jia Rao: initialize the wrr runqueue
 #ifdef CONFIG_FAIR_GROUP_SCHED
 		init_task_group.shares = init_task_group_load;
 		INIT_LIST_HEAD(&rq->leaf_cfs_rq_list);

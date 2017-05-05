@@ -342,3 +342,5 @@ ENTRY(sys_call_table)
 	.long sys_statistics_vma             /* 340 */
 	.long sys_by_process_vma             /* 341 */
 	.long sys_stats_for_zone            /* 342 */
+	.long sys_get_wrr_weight            /*343*/
+	.long sys_set_wrr_scheduler    /* 344 */

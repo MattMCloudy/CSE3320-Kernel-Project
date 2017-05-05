@@ -1219,12 +1219,13 @@ struct sched_wrr_entity {
 	int nr_cpus_allowed;
 
 	struct sched_wrr_entity *back;
-	struct sched_wrr_entity	*parent;
+	sched_wrr_entity	*parent;
 	/* rq on which this entity is (to be) queued: */
 	struct wrr_rq		*wrr_rq;
 	/* rq "owned" by this entity/group: */
 	struct wrr_rq		*my_q;
 	int weight;
+	int time_slice;
 };
 
 

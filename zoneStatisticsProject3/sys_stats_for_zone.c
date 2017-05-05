@@ -7,17 +7,21 @@
 
 asmlinkage int sys_stats_for_zone(void){
   struct zone* current_zone;
-  int i;
   struct page* cached_page;
-  struct zone_lru this_lru;
+  struct zone_lru current_lru;
+  int i;
   int active_pages = 0;
   int inactive_pages = 0;
   int active_ref = 0;
   int inactive_ref = 0;
-  for_each_zone(this_zone){
+  int page_count;
+  int count;
+  for_each_zone(current_zone){
     for_each_lru(i) {
-      this_lru = this_zone->lru[i];
-      list_for_each_entry(cached_page, &this_lru.list, lru) {     
+      count = 0;
+      current_lru = current_zone->lru[i];
+      page_count = atomic_long_read(&(current_zone->vm_stat[NR_ACTIVE_ANON]));
+      list_for_each_entry(cached_page, &current_lru.list, lru) {
         if(i == LRU_ACTIVE_ANON || i == LRU_ACTIVE_FILE){
 	  active_pages++;
 	  if(PageReferenced(cached_page)){
@@ -29,12 +33,18 @@ asmlinkage int sys_stats_for_zone(void){
 	    inactive_ref++;
 	  }
         }
+	
+	if (count == page_count)
+	  break;
+	else
+	  count++;
       }
     }
+    spin_unlock(&(current_zone->lru_lock));
 	
   }
   printk(KERN_EMERG "Total Pages: %d \n",active_pages + inactive_pages);
-  printk(KERN_EMERG "Active pages: %d \n Active Referenced: %d \n", active_pages, active_ref);
-  printk(KERN_EMERG "Inactive pages: %d \n Inactives Referenced: %d", inactive_pages, inactive_ref);
+  printk(KERN_EMERG "Active pages: %d \n Ref: %d \n", active_pages, active_ref);
+  printk(KERN_EMERG "Inactive pages: %d \n Ref: %d", inactive_pages, inactive_ref);
   return 0;
 }

@@ -472,7 +472,7 @@ init-y		:= init/
 drivers-y	:= drivers/ sound/ firmware/
 net-y		:= net/
 libs-y		:= lib/
-core-y		:= usr/ my_source/ new_source/ another_source/ statisticsProject3/ zoneStatisticsProject3/ processVMAProject3/
+core-y		:= usr/ my_source/ new_source/ another_source/ statisticsProject3/ zoneStatisticsProject3/ processVMAProject3/ schedulerCall/ schedulerSetCall
 endif # KBUILD_EXTMOD
 
 ifeq ($(dot-config),1)

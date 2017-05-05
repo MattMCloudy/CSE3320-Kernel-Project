@@ -348,10 +348,12 @@
 #define __NR_statistics_vma     340
 #define __NR_by_process_vma     341
 #define __NR_stats_for_zone     342
+#define __NR_get_wrr_weight     343
+#define __NR_set_wrr_scheduler  344
 
 #ifdef __KERNEL__
 
-#define NR_syscalls 343
+#define NR_syscalls 345
 
 #define __ARCH_WANT_IPC_PARSE_VERSION
 #define __ARCH_WANT_OLD_READDIR

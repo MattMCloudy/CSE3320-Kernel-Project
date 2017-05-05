@@ -220,6 +220,10 @@ asmlinkage int sys_by_process_vma(unsigned long mem, int pid);
 
 asmlinkage int sys_stats_for_zone(void);
 
+asmlinkage int sys_get_wrr_weight(int pid);
+
+asmlinkage int sys_set_wrr_scheduler(int pid, int weight);
+
 #endif	/* CONFIG_X86_32 */
 
 #endif	/* _ASM_X86_SYSCALL_H */
